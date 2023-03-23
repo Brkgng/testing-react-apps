@@ -11,13 +11,15 @@ jest.mock('react-use-geolocation')
 test('displays the users current location', async () => {
   const fakePosition = {coords: {latitude: 10, longitude: 20}}
 
-  let setPosition
+  let setPosition, setError
   useCurrentPosition.mockImplementation(() => {
     const positionState = React.useState(null)
-    setPosition = positionState[1]
-    const [error, setError] = React.useState(false)
+    const errorState = React.useState(false)
 
-    return [positionState[0], error]
+    setPosition = positionState[1]
+    setError = errorState[1]
+
+    return [positionState[0], errorState[0]]
   })
 
   render(<Location />)
@@ -25,7 +27,15 @@ test('displays the users current location', async () => {
   const spinnerWhileLoading = screen.getByLabelText(/loading/i)
   expect(spinnerWhileLoading).toBeInTheDocument()
 
+  const errorMessage = 'position is not found'
   act(() => {
+    setError({message: errorMessage})
+  })
+
+  expect(screen.getByRole('alert')).toHaveTextContent(errorMessage)
+
+  act(() => {
+    setError(false)
     setPosition(fakePosition)
   })
 
