@@ -3,38 +3,30 @@
 
 import * as React from 'react'
 import {render, screen, act} from '@testing-library/react'
+import {useCurrentPosition} from 'react-use-geolocation'
 import Location from '../../examples/location'
 
-window.navigator.geolocation = {getCurrentPosition: jest.fn()}
-
-function deferred() {
-  let resolve, reject
-  const promise = new Promise((res, rej) => {
-    resolve = res
-    reject = rej
-  })
-  return {promise, resolve, reject}
-}
+jest.mock('react-use-geolocation')
 
 test('displays the users current location', async () => {
   const fakePosition = {coords: {latitude: 10, longitude: 20}}
 
-  const {promise, resolve} = deferred()
+  let setPosition
+  useCurrentPosition.mockImplementation(() => {
+    const positionState = React.useState(null)
+    setPosition = positionState[1]
+    const [error, setError] = React.useState(false)
 
-  window.navigator.geolocation.getCurrentPosition.mockImplementation(
-    (successCb, errorCb) => {
-      promise.then(() => successCb(fakePosition)).catch(() => errorCb())
-    },
-  )
+    return [positionState[0], error]
+  })
 
   render(<Location />)
 
   const spinnerWhileLoading = screen.getByLabelText(/loading/i)
   expect(spinnerWhileLoading).toBeInTheDocument()
 
-  await act(async () => {
-    resolve()
-    await promise
+  act(() => {
+    setPosition(fakePosition)
   })
 
   const spinnerAfterLoading = screen.queryByLabelText(/loading/i)
